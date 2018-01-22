@@ -1,0 +1,190 @@
+# Description: Custom kernel configuration for DigitalOcean FreeBSD 11.x ZFS droplets
+# Author:      Lloyd Dilley
+# Created:     1/19/2018
+# Site:        https://github.com/ldilley/cloud
+# Purpose:     This configuration is meant to result in an efficient kernel for use on
+#              DigitalOcean FreeBSD 11.x droplets using ZFS. I have grouped devices and
+#              options into relevant sections which should make them easier to find and
+#              maintain. I also removed most extraneous items included in the GENERIC
+#              configuration and omitted kernel debugging support to keep the kernel
+#              trim. Lastly, FDESCFS (for OpenJDK), IPFW (IP Firewall), and some other
+#              features have been baked in. Unfortunately, ZFS support cannot be statically
+#              linked due to licensing restrictions.
+#          
+# For more information on this file, please read the config(5) manual page,
+# and/or the handbook section on Kernel Configuration Files:
+#
+#    http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#
+# The handbook is also available locally in /usr/share/doc/handbook
+# if you've installed the doc distribution, otherwise always see the
+# FreeBSD World Wide Web server (http://www.FreeBSD.org/) for the
+# latest information.
+#
+# An exhaustive list of options and more detailed explanations of the
+# device lines is also present in the ../../conf/NOTES and NOTES files.
+# If you are in doubt as to the purpose or necessity of a line, check first
+# in NOTES.
+
+cpu          HAMMER                       # This needs to remain "HAMMER" for amd64 (even for Xeons)
+ident        CUSTOM                       # Custom kernel name
+
+# Compile optimizations (>=-O3 is not recommended)
+makeoptions  COPTFLAGS="-O2 -march=haswell -pipe"
+
+# Debugging
+#makeoptions DEBUG=-g                     # Build kernel with gdb(1) debug symbols
+#makeoptions WITH_CTF=1                   # Run ctfconvert(1) for DTrace support
+#options     KTRACE                       # ktrace(1) support
+#options     STACK                        # stack(9) support
+#options     KDTRACE_FRAME                # Ensure frames are compiled in
+#options     KDTRACE_HOOKS                # Kernel DTrace hooks
+#options     DDB_CTF                      # Kernel ELF linker loads CTF data
+#options     KDB                          # Enable kernel debugger support
+#options     KDB_TRACE                    # Print a stack trace for a panic
+
+# Scheduling
+options      SCHED_ULE                    # ULE scheduler
+options      PREEMPTION                   # Enable kernel thread preemption
+options      _KPOSIX_PRIORITY_SCHEDULING  # POSIX P1003_1B real-time extensions
+
+# Filesystems
+#device      md                           # Memory "disks"
+options      CD9660                       # ISO 9660 Filesystem
+options      CD9660_ICONV                 # ISO 9660 character encoding conversion
+#options     MSDOSFS                      # MSDOS Filesystem
+options      FDESCFS                      # /dev/fd filesystem (needed for OpenJDK)
+options      PROCFS                       # Process filesystem (requires PSEUDOFS, also needed for OpenJDK)
+options      PSEUDOFS                     # Pseudo-filesystem framework
+#options     TMPFS                        # Temporary memory filesystem
+options      GEOM_PART_GPT                # GUID Partition Tables (needed for ZFS root)
+#options     GEOM_RAID                    # Soft RAID functionality
+options      GEOM_LABEL                   # Provides labelization (needed for GPT swap)
+
+# Binary compatibility
+options      COMPAT_FREEBSD32             # Compatible with i386 binaries
+#options     COMPAT_FREEBSD4              # Compatible with FreeBSD4
+#options     COMPAT_FREEBSD5              # Compatible with FreeBSD5
+#options     COMPAT_FREEBSD6              # Compatible with FreeBSD6
+#options     COMPAT_FREEBSD7              # Compatible with FreeBSD7
+#options     COMPAT_FREEBSD9              # Compatible with FreeBSD9
+#options     COMPAT_FREEBSD10             # Compatible with FreeBSD10
+#options     COMPAT_LINUX32               # Linux 32-bit ABI
+#options     COMPAT_LINUXKPI              # Linux Kernel Programming Interface
+
+# SysV features (Oracle RDBMS and other software requires these)
+options      SYSVSHM                      # SYSV-style shared memory
+options      SYSVMSG                      # SYSV-style message queues
+options      SYSVSEM                      # SYSV-style semaphores
+
+# Networking
+options      INET                         # InterNETworking
+options      INET6                        # IPv6 communications protocols
+#options     IPSEC                        # IP (v4/v6) security (requires "device crypto")
+#options     SCTP                         # Stream Control Transmission Protocol
+#options     TCP_OFFLOAD                  # TCP offload
+device       netmap                       # netmap(4) support (provides direct access to TX/RX rings on supported NICs)
+device       loop                         # Network loopback
+device       ether                        # Ethernet support
+#device      vlan                         # 802.1Q VLAN support
+#device      tun                          # Packet tunnel
+#device      gif                          # IPv6 and IPv4 tunneling
+#device      bpf                          # Berkeley packet filter (required for DHCP, tcpdump, etc.)
+
+# Firewall
+#device      pf                           # Built-in OpenBSD Packet Filter support
+#device      pflog                        # Packet Filter logging support
+#device      pfsync                       # Packet Filter firewall synchronization support
+#options     PF_DEFAULT_TO_DROP           # Change PF policy to drop by default
+#options     IPFILTER                     # Built-in IPF support
+#options     IPFILTER_LOG                 # IPF logging support
+#options     IPFILTER_LOOKUP              # Provides IPF IP pools to speed up IP lookups
+#options     IPFILTER_DEFAULT_BLOCK       # IPF blocks by default if no matching rule
+options      IPFIREWALL                   # Built-in IPFW support
+options      IPFIREWALL_VERBOSE           # Enables IPFW logging for rules with the "log" keyword 
+options      IPFIREWALL_VERBOSE_LIMIT=5   # Limits number of logged IPFW packets per entry
+#options     IPFIREWALL_DEFAULT_TO_ACCEPT # Sets default IPFW policy to pass traffic not explicitly denied
+#options     IPFIREWALL_NAT               # IPFW NAT support
+#options     IPFIREWALL_NAT64             # IPv6/4 NAT translation
+#options     IPFIREWALL_NPTV6             # IPv6 network prefix translation
+#options     IPDIVERT                     # FreeBSD NAT support
+#options     LIBALIAS                     # Masquerading and NAT library
+
+# NFS
+#options     NFSCL                        # Network Filesystem Client
+#options     NFSD                         # Network Filesystem Server
+#options     NFSLOCKD                     # Network Lock Manager
+#options     NFS_ROOT                     # NFS usable as /, requires NFSCL
+
+# Hardware/CPU
+options      SMP                          # Symmetric MultiProcessor Kernel
+options      DEVICE_NUMA                  # I/O Device Affinity
+options      EARLY_AP_STARTUP             # Early application processor startup
+device       cpufreq                      # CPU frequency control
+
+# Hardware/audio
+#device      sound                        # Generic sound driver
+
+# Hardware/bus
+device       acpi                         # Advanced Configuration and Power Interface
+options      ACPI_DMAR                    # ACPI Direct Memory Access Remapping
+device       pci                          # Peripheral Component Interconnect
+options      PCI_HP                       # PCI-Express native HotPlug
+options      PCI_IOV                      # PCI SR-IOV support
+
+# Hardware/display
+device       sc                           # syscons is the default console driver, resembling an SCO console
+device       vga                          # VGA video card driver
+device       vt                           # New video console driver
+device       vt_vga                       # VT VGA support
+#device      vt_efifb                     # VT EFI framebuffer
+device       splash                       # Splash screen and screen saver support
+options      VESA                         # Add support for VESA BIOS Extensions (VBE)
+options      SC_PIXEL_MODE                # Add support for the raster text mode
+
+# Hardware/peripherals
+device       atkbdc                       # AT keyboard controller
+device       atkbd                        # AT keyboard
+#device      kbdmux                       # Keyboard multiplexer
+#device      psm                          # PS/2 mouse
+options      KBD_INSTALL_CDEV             # Install a CDEV entry in /dev
+
+# Hardware/ports
+#device      uart                         # Generic UART driver for serial (COM) ports
+#device      ppc                          # Parallel port chipset
+#device      ppbus                        # Parallel port bus
+#device      lpt                          # Printer
+#device      ppi                          # Parallel port interface device
+
+# Hardware/storage
+options      SCSI_DELAY=5000              # Delay (in ms) before probing SCSI
+device       ata                          # Legacy ATA/SATA controllers
+#device      fdc                          # Floppy disk controller
+device       scbus                        # SCSI bus (required for ATA/SCSI)
+
+# Security
+options      AUDIT                        # Security event auditing
+options      CAPABILITY_MODE              # Capsicum capability mode
+options      CAPABILITIES                 # Capsicum capabilities
+options      MAC                          # TrustedBSD MAC Framework
+options      RACCT                        # Resource accounting framework
+options      RCTL                         # Resource limits
+options      RACCT_DEFAULT_TO_DISABLED    # Set kern.racct.enable=0 by default
+device       aesni                        # Intel AES-NI support
+device       crypto                       # Cryptographic framework (required by IPSEC)
+device       random                       # Entropy device
+
+# Miscellaneous
+#options     HWPMC_HOOKS                  # Necessary kernel hooks for hwpmc(4)
+options      INCLUDE_CONFIG_FILE          # Include this file in kernel
+options      LIBICONV                     # Character encoding conversion library
+options      PRINTF_BUFR_SIZE=128         # Prevent printf output being interspersed
+
+# VirtIO support (required for DigitalOcean/KVM)
+device       virtio                       # Generic VirtIO bus (required)
+device       virtio_pci                   # VirtIO PCI device
+device       vtnet                        # VirtIO Ethernet device
+device       virtio_blk                   # VirtIO Block device
+device       virtio_scsi                  # VirtIO SCSI device
+device       virtio_balloon               # VirtIO Memory Balloon device
+device       virtio_console               # VirtIO console device

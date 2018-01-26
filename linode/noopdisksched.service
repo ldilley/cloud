@@ -1,0 +1,12 @@
+# On virtual machines, set the disk scheduler to "noop" to hand off processing to the hypervisor.
+# This is the RHEL recommendation for virtualized guests in many cases. -ldilley
+# https://access.redhat.com/solutions/5427
+[Unit]
+Description=Sets all block devices to the "noop" scheduler
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "for disk in `ls -d /sys/block/sd[a-h]`; do echo noop > $disk/queue/scheduler; done"
+
+[Install]
+WantedBy=default.target

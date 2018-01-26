@@ -1,2 +1,2 @@
 # cloud :cloud:
-Various cloud-related stuff
+This repository contains various cloud-related configurations and scripts.

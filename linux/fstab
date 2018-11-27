@@ -1,0 +1,9 @@
+/dev/mapper/vg00-root  /         xfs   defaults,noatime                                    0 0
+/dev/vda1              /boot     xfs   defaults,noatime                                    0 0
+/dev/mapper/vg00-apps  /apps     xfs   defaults,noatime,nosuid                             0 0
+/dev/mapper/vg00-home  /home     xfs   defaults,noatime,nodev,nosuid                       0 0
+/dev/mapper/vg00-tmp   /tmp      xfs   defaults,noatime,nodev,noexec,nosuid                0 0
+/dev/mapper/vg00-var   /var      xfs   defaults,noatime,nodev,nosuid                       0 0
+/dev/mapper/vg00-swap  swap      swap  defaults                                            0 0
+/tmp                   /var/tmp  none  rw,nodev,noexec,nosuid,bind                         0 0
+proc                   /proc     proc  rw,nodev,noexec,nosuid,relatime,hidepid=2,gid=wheel 0 0

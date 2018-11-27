@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# See the following for more information on IPFW:
+# https://www.freebsd.org/doc/handbook/firewalls-ipfw.html
+
+# Flush any existing rules
+ipfw -q -f flush
+
+# Add command
+cmd="ipfw -q add"
+
+# NIC connected to the Internet
+inic="vtnet0"
+
+# Private NIC
+pnic="vtnet1"
+
+# Allow all traffic on local loopback
+$cmd 00100 allow all from any to any via lo0
+
+# Check the packet against the dynamic state table
+$cmd 00200 check-state
+
+# Allow ping outbound
+#$cmd 00300 allow icmp from any to any out via $inic keep-state
+
+# Allow DNS outbound
+#$cmd 00400 allow udp from any to any 53 out via $inic keep-state
+
+# Allow any traffic originating from inside out
+$cmd 00500 allow all from any to any out via $inic keep-state
+
+# Allow ICMP echo request and reply (ping)
+$cmd 00600 allow icmp from any to any in via $inic icmptypes 0,8
+
+# Allow ICMPv6 destination unreachable, packet too big, time exceeded,
+# parameter problem, echo request, echo reply, router advertisement,
+# neighbor solicitation, neighbor advertisement, and redirect
+$cmd 00700 allow ipv6-icmp from any to any icmp6types 1,2,3,4,128,129,134,135,136,137
+
+# Restrict incoming SSH connections
+$cmd 00800 allow tcp from 192.168.7.75 to me 22 in via $inic
+
+# Allow inbound DNS traffic
+$cmd 00825 allow udp from any to me 53 in via $inic
+$cmd 00826 allow udp from any to me6 53 in via $inic
+
+# Allow inbound web traffic
+$cmd 00850 allow tcp from any to me 80 in via $inic
+$cmd 00851 allow tcp from any to me6 80 in via $inic
+$cmd 00852 allow tcp from any to me 443 in via $inic
+$cmd 00853 allow tcp from any to me6 443 in via $inic
+
+# Deny everything else
+$cmd 00998 deny all from any to any in via $pnic
+$cmd 00999 deny all from any to any in via $inic

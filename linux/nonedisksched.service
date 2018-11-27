@@ -1,0 +1,12 @@
+# On virtual machines, set the disk scheduler to "none" to hand off processing to the hypervisor.
+# This is the RHEL recommendation for virtualized guests in many cases to prevent double handling. -ldilley
+# https://access.redhat.com/solutions/5427
+[Unit]
+Description=Sets the block device scheduler to "none".
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "echo none > /sys/block/vda/queue/scheduler"
+
+[Install]
+WantedBy=default.target

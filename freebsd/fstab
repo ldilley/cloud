@@ -1,0 +1,12 @@
+# Device	Mountpoint	FStype	Options	Dump	Pass#
+/dev/vtbd0p2	/		ufs	rw,noatime	1	1
+/dev/vtbd0p3	/tmp		ufs	rw,noatime	2	2
+/dev/vtbd0p4	/usr		ufs	rw,noatime	2	2
+/dev/vtbd0p5	/var		ufs	rw,noatime	2	2
+/dev/vtbd0p6	none		swap	sw		0	0
+fdesc		/dev/fd		fdescfs	rw		0	0
+proc		/proc		procfs	rw		0	0
+# Linux support
+linprocfs	/compat/linux/proc	linprocfs	rw	0	0
+linsysfs	/compat/linux/sys	linsysfs	rw	0	0
+tmpfs		/compat/linux/dev/shm	tmpfs	rw,mode=1777	0	0

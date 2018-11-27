@@ -1,54 +1,75 @@
-# Description: Custom kernel configuration for DigitalOcean FreeBSD 11.x ZFS droplets
-# Author:      Lloyd Dilley
-# Created:     1/19/2018
-# Site:        https://github.com/ldilley/cloud
-# Purpose:     This configuration is meant to result in an efficient kernel for use on
-#              DigitalOcean FreeBSD 11.x droplets using ZFS. I have grouped devices and
-#              options into relevant sections which should make them easier to find and
-#              maintain. I also removed most extraneous items included in the GENERIC
-#              configuration and omitted kernel debugging support to keep the kernel
-#              trim. Lastly, FDESCFS (for OpenJDK), IPFW (IP Firewall), and some other
-#              features have been baked in. Unfortunately, ZFS support cannot be statically
-#              linked due to licensing restrictions.
-#          
-# For more information on this file, please read the config(5) manual page,
-# and/or the handbook section on Kernel Configuration Files:
-#
-#    http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
-#
-# The handbook is also available locally in /usr/share/doc/handbook
-# if you've installed the doc distribution, otherwise always see the
-# FreeBSD World Wide Web server (http://www.FreeBSD.org/) for the
-# latest information.
-#
-# An exhaustive list of options and more detailed explanations of the
-# device lines is also present in the ../../conf/NOTES and NOTES files.
-# If you are in doubt as to the purpose or necessity of a line, check first
-# in NOTES.
+###################################################################################################
+# Description: Custom kernel configuration for DigitalOcean/Vultr FreeBSD 11.x KVM guests         #
+# Author:      Lloyd Dilley                                                                       #
+# Created:     1/19/2018                                                                          #
+# Site:        https://github.com/ldilley/cloud                                                   #
+#                                                                                                 #
+# Purpose:     This configuration is meant to result in an efficient kernel for use on            #
+#              DigitalOcean and Vultr FreeBSD 11.x KVM guests using UFS. I have grouped devices   #
+#              and options into relevant sections which should make them easier to locate and     #
+#              maintain. I also removed most extraneous items included in the GENERIC             #
+#              configuration and omitted kernel debugging support to keep the kernel trim.        #
+#              Lastly, FDESCFS (for OpenJDK), IPFW (IP Firewall), Linux ABI support (32 bit),     #
+#              and some other features have been baked in statically opposed to remaining as      #
+#              dynamic loadable kernel modules.                                                   #
+#                                                                                                 #
+# Caveats:     Unfortunately, ZFS support cannot be statically included due to licensing          #
+#              restrictions. If you are solely using ZFS, I would recommend commenting all        #
+#              UFS options at the bottom of the Filesystem section where noted. At this time      #
+#              (11.1-RELEASE), static support for 64-bit Linux compatibility is not available     #
+#              and its dynamic support is mutually exclusive with static 32-bit compatibility.    #
+#              If you require both, comment COMPAT_LINUX32 and kldload linux and linux64 instead. #
+#              In my case, I only require 32-bit support considering the Steam program for        #
+#              running dedicated servers is currently distributed as a 32-bit Linux binary.
+#                                                                                                 #
+# Notes:       For more information on this file, please read the config(5) manual page, and/or   #
+#              the handbook section on Kernel Configuration Files at:                             #
+#                                                                                                 #
+#              http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html #
+#                                                                                                 #
+#              The handbook is also available locally in /usr/share/doc/handbook if you have      #
+#              installed the doc distribution. Otherwise, always refer to http://www.FreeBSD.org/ #
+#              for the latest information.                                                        #
+#                                                                                                 #
+#              An exhaustive list of options and more detailed explanations of the device lines   #
+#              is present in the ../../conf/NOTES and NOTES files. The LINT configuration also    #
+#              contains an extensive list. If you are in doubt as to the purpose or necessity of  #
+#              a line, check NOTES first.                                                         #
+###################################################################################################
 
+###############
+### General ###
+###############
 cpu          HAMMER                       # This needs to remain "HAMMER" for amd64 (even for Xeons)
 ident        CUSTOM                       # Custom kernel name
-
-# Compile optimizations (>=-O3 is not recommended)
+## Compile optimizations (>=-O3 is not recommended)
 makeoptions  COPTFLAGS="-O2 -march=haswell -pipe"
 
-# Debugging
+#################
+### Debugging ###
+#################
 #makeoptions DEBUG=-g                     # Build kernel with gdb(1) debug symbols
 #makeoptions WITH_CTF=1                   # Run ctfconvert(1) for DTrace support
 #options     KTRACE                       # ktrace(1) support
 #options     STACK                        # stack(9) support
 #options     KDTRACE_FRAME                # Ensure frames are compiled in
 #options     KDTRACE_HOOKS                # Kernel DTrace hooks
+#options     DDB                          # Enable DDB debugger support
 #options     DDB_CTF                      # Kernel ELF linker loads CTF data
+#options     GDB                          # Enable GDB debugger support
 #options     KDB                          # Enable kernel debugger support
 #options     KDB_TRACE                    # Print a stack trace for a panic
 
-# Scheduling
+##################
+### Scheduling ###
+##################
 options      SCHED_ULE                    # ULE scheduler
 options      PREEMPTION                   # Enable kernel thread preemption
 options      _KPOSIX_PRIORITY_SCHEDULING  # POSIX P1003_1B real-time extensions
 
-# Filesystems
+###################
+### Filesystems ###
+###################
 #device      md                           # Memory "disks"
 options      CD9660                       # ISO 9660 Filesystem
 options      CD9660_ICONV                 # ISO 9660 character encoding conversion
@@ -56,28 +77,46 @@ options      CD9660_ICONV                 # ISO 9660 character encoding conversi
 options      FDESCFS                      # /dev/fd filesystem (needed for OpenJDK)
 options      PROCFS                       # Process filesystem (requires PSEUDOFS, also needed for OpenJDK)
 options      PSEUDOFS                     # Pseudo-filesystem framework
-#options     TMPFS                        # Temporary memory filesystem
 options      GEOM_PART_GPT                # GUID Partition Tables (needed for ZFS root)
 #options     GEOM_RAID                    # Soft RAID functionality
 options      GEOM_LABEL                   # Provides labelization (needed for GPT swap)
+## Linux support (also uncomment the relevant options in the Binary Compatibility section)
+#options     LINPROCFS                    # Linux proc filesystem support (requires COMPAT_LINUX32 and PSEUDOFS)
+#options     LINSYSFS                     # Linux sys filesystem support (requires COMPAT_LINUX32 and PSEUDOFS)
+#options     TMPFS                        # Temporary memory filesystem
+## Uncomment everything below if using UFS instead of ZFS.
+options      FFS                          # Berkeley Fast Filesystem
+options      SOFTUPDATES                  # Enable FFS soft updates support
+options      UFS_ACL                      # Support for access control lists
+options      UFS_DIRHASH                  # Improve performance on big directories
+options      UFS_GJOURNAL                 # Enable gjournal-based UFS journaling
+options      QUOTA                        # Enable disk quotas for UFS
 
-# Binary compatibility
-options      COMPAT_FREEBSD32             # Compatible with i386 binaries
-#options     COMPAT_FREEBSD4              # Compatible with FreeBSD4
-#options     COMPAT_FREEBSD5              # Compatible with FreeBSD5
-#options     COMPAT_FREEBSD6              # Compatible with FreeBSD6
-#options     COMPAT_FREEBSD7              # Compatible with FreeBSD7
-#options     COMPAT_FREEBSD9              # Compatible with FreeBSD9
-#options     COMPAT_FREEBSD10             # Compatible with FreeBSD10
-#options     COMPAT_LINUX32               # Linux 32-bit ABI
+############################
+### Binary Compatibility ###
+############################
+#options     COMPAT_43                    # 4.3BSD compatibility
+options      COMPAT_FREEBSD32             # i386 compatibility (needed for COMPAT_LINUX32)
+#options     COMPAT_FREEBSD4              # FreeBSD4 compatibility
+#options     COMPAT_FREEBSD5              # FreeBSD5 compatibility
+#options     COMPAT_FREEBSD6              # FreeBSD6 compatibility
+#options     COMPAT_FREEBSD7              # FreeBSD7 compatibility
+#options     COMPAT_FREEBSD9              # FreeBSD9 compatibility
+#options     COMPAT_FREEBSD10             # FreeBSD10 compatibility
+#options     COMPAT_LINUX32               # Linux 32-bit ABI (requires COMPAT_FREEBSD32 and incompatible with linux64 module)
 #options     COMPAT_LINUXKPI              # Linux Kernel Programming Interface
 
-# SysV features (Oracle RDBMS and other software requires these)
+#####################
+### SysV Features ###
+#####################
+## Oracle RDBMS requires these options.
 options      SYSVSHM                      # SYSV-style shared memory
 options      SYSVMSG                      # SYSV-style message queues
 options      SYSVSEM                      # SYSV-style semaphores
 
-# Networking
+##################
+### Networking ###
+##################
 options      INET                         # InterNETworking
 options      INET6                        # IPv6 communications protocols
 #options     IPSEC                        # IP (v4/v6) security (requires "device crypto")
@@ -91,7 +130,9 @@ device       ether                        # Ethernet support
 #device      gif                          # IPv6 and IPv4 tunneling
 #device      bpf                          # Berkeley packet filter (required for DHCP, tcpdump, etc.)
 
-# Firewall
+################
+### Firewall ###
+################
 #device      pf                           # Built-in OpenBSD Packet Filter support
 #device      pflog                        # Packet Filter logging support
 #device      pfsync                       # Packet Filter firewall synchronization support
@@ -110,59 +151,77 @@ options      IPFIREWALL_VERBOSE_LIMIT=5   # Limits number of logged IPFW packets
 #options     IPDIVERT                     # FreeBSD NAT support
 #options     LIBALIAS                     # Masquerading and NAT library
 
-# NFS
+###########
+### NFS ###
+###########
 #options     NFSCL                        # Network Filesystem Client
 #options     NFSD                         # Network Filesystem Server
 #options     NFSLOCKD                     # Network Lock Manager
-#options     NFS_ROOT                     # NFS usable as /, requires NFSCL
+#options     NFS_ROOT                     # NFS usable as / (requires NFSCL)
 
-# Hardware/CPU
+####################
+### Hardware/CPU ###
+####################
 options      SMP                          # Symmetric MultiProcessor Kernel
 options      DEVICE_NUMA                  # I/O Device Affinity
 options      EARLY_AP_STARTUP             # Early application processor startup
 device       cpufreq                      # CPU frequency control
 
-# Hardware/audio
+######################
+### Hardware/Audio ###
+######################
 #device      sound                        # Generic sound driver
 
-# Hardware/bus
+####################
+### Hardware/Bus ###
+####################
 device       acpi                         # Advanced Configuration and Power Interface
 options      ACPI_DMAR                    # ACPI Direct Memory Access Remapping
 device       pci                          # Peripheral Component Interconnect
 options      PCI_HP                       # PCI-Express native HotPlug
 options      PCI_IOV                      # PCI SR-IOV support
 
-# Hardware/display
+########################
+### Hardware/Display ###
+########################
 device       sc                           # syscons is the default console driver, resembling an SCO console
 device       vga                          # VGA video card driver
 device       vt                           # New video console driver
 device       vt_vga                       # VT VGA support
 #device      vt_efifb                     # VT EFI framebuffer
 device       splash                       # Splash screen and screen saver support
-options      VESA                         # Add support for VESA BIOS Extensions (VBE)
+#options     VESA                         # Add support for VESA BIOS Extensions (VBE)
 options      SC_PIXEL_MODE                # Add support for the raster text mode
 
-# Hardware/peripherals
+############################
+### Hardware/Peripherals ###
+############################
 device       atkbdc                       # AT keyboard controller
 device       atkbd                        # AT keyboard
 #device      kbdmux                       # Keyboard multiplexer
 #device      psm                          # PS/2 mouse
 options      KBD_INSTALL_CDEV             # Install a CDEV entry in /dev
 
-# Hardware/ports
+######################
+### Hardware/Ports ###
+######################
 #device      uart                         # Generic UART driver for serial (COM) ports
 #device      ppc                          # Parallel port chipset
 #device      ppbus                        # Parallel port bus
 #device      lpt                          # Printer
 #device      ppi                          # Parallel port interface device
 
-# Hardware/storage
+########################
+### Hardware/Storage ###
+########################
 options      SCSI_DELAY=5000              # Delay (in ms) before probing SCSI
 device       ata                          # Legacy ATA/SATA controllers
 #device      fdc                          # Floppy disk controller
 device       scbus                        # SCSI bus (required for ATA/SCSI)
 
-# Security
+################
+### Security ###
+################
 options      AUDIT                        # Security event auditing
 options      CAPABILITY_MODE              # Capsicum capability mode
 options      CAPABILITIES                 # Capsicum capabilities
@@ -174,13 +233,18 @@ device       aesni                        # Intel AES-NI support
 device       crypto                       # Cryptographic framework (required by IPSEC)
 device       random                       # Entropy device
 
-# Miscellaneous
+#####################
+### Miscellaneous ###
+#####################
 #options     HWPMC_HOOKS                  # Necessary kernel hooks for hwpmc(4)
 options      INCLUDE_CONFIG_FILE          # Include this file in kernel
 options      LIBICONV                     # Character encoding conversion library
 options      PRINTF_BUFR_SIZE=128         # Prevent printf output being interspersed
 
-# VirtIO support (required for DigitalOcean/KVM)
+######################
+### VirtIO Support ###
+######################
+## These devices are required for KVM guests.
 device       virtio                       # Generic VirtIO bus (required)
 device       virtio_pci                   # VirtIO PCI device
 device       vtnet                        # VirtIO Ethernet device

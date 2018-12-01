@@ -41,3 +41,24 @@
 -A OUTPUT -o eth0:1 -p icmp -j ACCEPT
 -A OUTPUT -o eth0:1 -p tcp -j ACCEPT
 -A OUTPUT -o eth0:1 -p udp -j ACCEPT
+
+# Allow connections back in if the traffic originated from this host
+-A INPUT -i eth0 -p tcp -j ACCEPT -m state --state ESTABLISHED,RELATED
+-A INPUT -i eth0 -p udp -j ACCEPT -m state --state ESTABLISHED,RELATED
+-A INPUT -i eth0:1 -p tcp -j ACCEPT -m state --state ESTABLISHED,RELATED
+-A INPUT -i eth0:1 -p udp -j ACCEPT -m state --state ESTABLISHED,RELATED
+
+# Log all dropped traffic
+-N LOGGING
+-A INPUT -j LOGGING
+-A OUTPUT -j LOGGING
+-A FORWARD -j LOGGING
+-A LOGGING -m limit --limit 2/min -j LOG --log-prefix "Dropped (IPv4): " --log-level 4
+-A LOGGING -j DROP
+
+# Drop everything else
+-A INPUT -j DROP
+-A OUTPUT -j DROP
+-A FORWARD -j DROP
+
+COMMIT

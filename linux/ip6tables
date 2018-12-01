@@ -1,0 +1,69 @@
+# See the "ip6tables" manual page for more information.
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Required ICMP traffic for IPv6
+-A INPUT -p icmpv6 --icmpv6-type destination-unreachable -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type packet-too-big -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type time-exceeded -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type parameter-problem -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type echo-request -m limit --limit 300/min -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type echo-reply -m limit --limit 300/min -j ACCEPT
+
+# Allow other ICMPv6 types only if the hop limit field is 255
+-A INPUT -p icmpv6 --icmpv6-type router-advertisement -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type neighbor-solicitation -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type neighbor-advertisement -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type redirect -m hl --hl-eq 255 -j ACCEPT
+
+# Block all other ICMP traffic
+-A INPUT -p icmpv6 -j DROP
+
+# Restrict SSH access
+-A INPUT -s fe80::1:2:3:5 -d fe80::1:2:3:4 -p tcp --dport 22 -j ACCEPT
+
+# SMTP
+# Rate limit by hitcount/seconds
+-A INPUT -d fe80::1:2:3:4 -p tcp --dport 25 -m state --state NEW -m recent --set
+-A INPUT -d fe80::1:2:3:4 -p tcp --dport 25 -m state --state NEW -m recent --update --seconds 300 --hitcount 10 -j DROP
+# Limit concurrent sessions per source IP to 3
+-A INPUT -d fe80::1:2:3:4 -p tcp --syn --dport 25 -m connlimit --connlimit-above 3 -j REJECT --reject-with tcp-reset
+-A INPUT -d fe80::1:2:3:4 -p tcp --dport 25 -j ACCEPT
+
+# DNS
+-A INPUT -d fe80::1:2:3:4 -p udp --dport 53 -j ACCEPT
+
+# Web
+-A INPUT -d fe80::1:2:3:4 -p tcp --dport 80 -j ACCEPT
+-A INPUT -d fe80::1:2:3:4 -p tcp --dport 443 -j ACCEPT
+
+# Allow all traffic on the local loopback interface
+-A INPUT -i lo -j ACCEPT
+-A OUTPUT -o lo -j ACCEPT
+
+# Allow traffic originating from inside the host out
+-A OUTPUT -o eth0 -p icmpv6 -j ACCEPT
+-A OUTPUT -o eth0 -p tcp -j ACCEPT
+-A OUTPUT -o eth0 -p udp -j ACCEPT
+
+# Allow connections back in if the traffic originated from this host
+-A INPUT -i eth0 -p tcp -j ACCEPT -m state --state ESTABLISHED,RELATED
+-A INPUT -i eth0 -p udp -j ACCEPT -m state --state ESTABLISHED,RELATED
+
+# Log all dropped traffic
+-N LOGGING
+-A INPUT -j LOGGING
+-A OUTPUT -j LOGGING
+-A FORWARD -j LOGGING
+-A LOGGING -m limit --limit 2/min -j LOG --log-prefix "Dropped (IPv6): " --log-level 4
+-A LOGGING -j DROP
+
+# Drop everything else
+-A INPUT -j DROP
+-A OUTPUT -j DROP
+-A FORWARD -j DROP
+
+COMMIT
